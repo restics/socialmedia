@@ -1,7 +1,10 @@
 package com.restics.socialmedia;
 
+import com.restics.socialmedia.repository.UserRepository;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class SocialmediaApplication {
@@ -10,4 +13,14 @@ public class SocialmediaApplication {
         SpringApplication.run(SocialmediaApplication.class, args);
     }
 
+//    @Bean
+//    CommandLineRunner demo(UserRepository userRepo) {
+//        return args -> {
+//            System.out.println("\n=== USERS IN DATABASE ===");
+//            userRepo.findAll().forEach(user ->
+//                    System.out.println("  " + user.name() + " — " + user.bio())
+//            );
+//            System.out.println("=========================\n");
+//        };
+//    }
 }
