@@ -29,4 +29,30 @@ public class UserRepository {
     public List<User> findAll() {
         return jdbc.query("SELECT * FROM users ORDER BY name", USER_MAPPER);
     }
+    
+    public User findById(int id) {
+        return jdbc.queryForObject(
+            "SELECT * FROM users WHERE user_id = ?",
+            USER_MAPPER,
+            id
+        );
+    }
+
+    public void save(User user) {
+        jdbc.update(
+            "INSERT INTO users (user_id, password, email, name, bio) VALUES (?, ?, ?, ?, ?)",
+            user.userId(),
+	    user.password(),
+	    user.email(),
+	    user.name(),
+	    user.bio()
+        );
+    }
+
+    public void deleteById(int id) {
+        jdbc.update(
+            "DELETE FROM users WHERE user_id = ?",
+            id
+        );
+    }
 }
