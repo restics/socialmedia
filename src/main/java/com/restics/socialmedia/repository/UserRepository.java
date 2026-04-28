@@ -40,12 +40,29 @@ public class UserRepository {
 
     public void save(User user) {
         jdbc.update(
-            "INSERT INTO users (user_id, password, email, name, bio) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO users (user_id, password, email, name, bio) " +
+	    "VALUES (?, ?, ?, ?, ?)",
             user.userId(),
 	    user.password(),
 	    user.email(),
 	    user.name(),
 	    user.bio()
+        );
+    }
+    
+    public User findByEmail(String email) {
+        return jdbc.queryForObject(
+                "SELECT * FROM users WHERE email = ?",
+                USER_MAPPER,
+                email
+        );
+    }
+
+    public void updateBio(int id, String bio) {
+        jdbc.update(
+                "UPDATE users SET bio = ? WHERE user_id = ?",
+                bio,
+                id
         );
     }
 
