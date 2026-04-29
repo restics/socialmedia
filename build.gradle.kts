@@ -11,7 +11,7 @@ plugins {
     java
     id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.vaadin") version "24.3.7"
+    id("com.vaadin")
 }
 
 group = "com.restics"
@@ -33,9 +33,8 @@ repositories {
 
 dependencyManagement {
     imports {
-        mavenBom("com.vaadin:vaadin-bom:24.3.7")
-    }	
-   
+        mavenBom("com.vaadin:vaadin-bom:${property("vaadinVersion")}")
+    }
 }
 
 dependencies {
@@ -47,4 +46,3 @@ dependencies {
     "developmentOnly"("com.vaadin:vaadin-dev")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
-
