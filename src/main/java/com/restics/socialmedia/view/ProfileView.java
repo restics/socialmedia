@@ -2,6 +2,7 @@ package com.restics.socialmedia.view;
 
 import java.util.List;
 
+import com.restics.socialmedia.CurrentUser;
 import com.restics.socialmedia.model.Post;
 import com.restics.socialmedia.model.User;
 import com.restics.socialmedia.service.PostService; // Need to replace with new Post service
@@ -20,7 +21,7 @@ public class ProfileView extends VerticalLayout {
 
     private final PostService postService;
 
-    public ProfileView(UserService userService, PostService postService) {
+    public ProfileView(CurrentUser cu, PostService postService) {
         this.postService = postService;
 
         setSizeFull();
@@ -28,7 +29,7 @@ public class ProfileView extends VerticalLayout {
         setSpacing(true);
         setPadding(true);
 
-        User currentUser = userService.getCurrentUser();
+        User currentUser = cu.get();
         if (currentUser != null) {
             renderProfile(currentUser);
         } else {
@@ -80,7 +81,7 @@ public class ProfileView extends VerticalLayout {
             feed.add(new Span("No posts yet."));
         } else {
             for (Post post : posts) {
-                feed.add(new PostCard(post, postService, user.name()));
+                feed.add(new PostCard(post, postService, user));
             }
         }
 

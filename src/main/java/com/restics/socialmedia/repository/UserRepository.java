@@ -51,7 +51,7 @@ public class UserRepository {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO users (name, password, email) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO users (name, password, email) VALUES (?, ?, ?)",
                     new String[]{"user_id"}
             );
             ps.setString(1, name);

@@ -3,6 +3,8 @@ package com.restics.socialmedia;
 
 import com.restics.socialmedia.model.User;
 import com.vaadin.flow.spring.annotation.VaadinSessionScope;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -14,13 +14,11 @@ public class UserService {
 
     private final UserRepository userRepo;
 
-    private final CurrentUser currentUser;
     private final FollowRepository followRepo;
 
-    public UserService(UserRepository userRepo, FollowRepository followRepo, CurrentUser currentUser) {
+    public UserService(UserRepository userRepo, FollowRepository followRepo) {
         this.userRepo = userRepo;
         this.followRepo = followRepo;
-        this.currentUser = currentUser;
     }
 
     public List<User> getAllUsers() {
@@ -38,8 +36,5 @@ public class UserService {
     public List<User> getFollowedUsers(int userId) {
         return followRepo.getFollowedUsers(userId);
     }
-    
-    public User getCurrentUser(){
-        return currentUser.get();
-    }
+
 }

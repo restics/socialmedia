@@ -12,14 +12,13 @@ public class AuthService {
 
     UserRepository userRepository;
 
-    CurrentUser currentUser;
 
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
-    public boolean authenticate(String email, String password) {
-        User user = userRepository.findByEmail(email);
-        currentUser.set(user);
+    public boolean authenticate(CurrentUser cu, String name, String password) {
+        User user = userRepository.findByName(name);
+        cu.set(user); // should be fine since it passes the reference of the singleton?
         return Objects.equals(user.password(), password);
     }
 }

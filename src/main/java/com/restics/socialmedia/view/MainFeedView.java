@@ -1,5 +1,6 @@
 package com.restics.socialmedia.view;
 
+import com.restics.socialmedia.CurrentUser;
 import com.restics.socialmedia.model.User;
 // import com.restics.socialmedia.service.PostService; Need to replace with new Post service 
 import com.restics.socialmedia.service.PostService;
@@ -14,9 +15,9 @@ import com.vaadin.flow.router.Route;
 @PageTitle("Timeline | SocialMedia")
 public class MainFeedView extends VerticalLayout {
 
-    public MainFeedView(PostService postService, UserService userService) {
+    public MainFeedView(CurrentUser cu, PostService postService, UserService userService) {
         // Get the current user's name so that we can pass it to the PostCard for the edit/delete buttons
-        User currentUser = userService.getCurrentUser();
+        User currentUser = cu.get();
         String currentUserName = currentUser != null ? currentUser.name() : null;
 
         // Centersthe feed
@@ -30,7 +31,7 @@ public class MainFeedView extends VerticalLayout {
         add(subtitle);
 
         postService.findAllPosts().forEach(post -> { // display all posts
-            add(new PostCard(post, postService, currentUserName));
+            add(new PostCard(post, postService, currentUser));
         });
     }
 }

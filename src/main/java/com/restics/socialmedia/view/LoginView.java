@@ -1,5 +1,6 @@
 package com.restics.socialmedia.view;
 
+import com.restics.socialmedia.CurrentUser;
 import com.restics.socialmedia.service.AuthService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H1;
@@ -26,7 +27,7 @@ import com.vaadin.flow.router.Route;
 public class LoginView extends VerticalLayout {
     private final AuthService authService;
 
-    public LoginView(AuthService authService) {
+    public LoginView(CurrentUser cu, AuthService authService) {
         this.authService = authService;
         setSizeFull();
         setAlignItems(Alignment.CENTER);
@@ -46,7 +47,7 @@ public class LoginView extends VerticalLayout {
             String username = usernameField.getValue();
             String password = passwordField.getValue();
 
-            if (authService.authenticate(username, password)) {
+            if (authService.authenticate(cu, username, password)) {
                 Notification.show("Login successful!")
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 getUI().ifPresent(ui -> ui.navigate(MainFeedView.class));

@@ -2,7 +2,9 @@ package com.restics.socialmedia.view;
 
 import java.util.List;
 
+import com.restics.socialmedia.CurrentUser;
 import com.restics.socialmedia.model.Post;
+import com.restics.socialmedia.model.User;
 import com.restics.socialmedia.service.PostService; // Need to replace with new Post service
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -22,7 +24,8 @@ public class PostCard extends VerticalLayout {
 
     private int currentLikes;
 
-    public PostCard(Post post, PostService postService, String currentUser, boolean isReply) {
+    CurrentUser currentUser;
+    public PostCard(Post post, PostService postService, User currentUser, boolean isReply) {
         this.currentLikes = post.likes();
 
         // Post card styling
@@ -56,7 +59,7 @@ public class PostCard extends VerticalLayout {
         Button likeBtn = new Button(" " + currentLikes, new Icon(VaadinIcon.HEART));
         likeBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
         likeBtn.addClickListener(e -> {
-            postService.likePost(post.postId());
+            postService.likePost(currentUser.userId(), post.postId());
             currentLikes++;
             likeBtn.setText(" " + currentLikes);
         });
@@ -71,7 +74,7 @@ public class PostCard extends VerticalLayout {
         }
 
         // Edit/Delete for Owner
-        if (currentUser != null && currentUser.equalsIgnoreCase(post.author())) {
+        if (currentUser != null && currentUser.userId()==post.authorId()) {
             Button editBtn = new Button("Edit", new Icon(VaadinIcon.EDIT));
             editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
             editBtn.addClickListener(e -> openEditDialog(post, postService, contentText));
@@ -86,7 +89,7 @@ public class PostCard extends VerticalLayout {
         add(actions);
     }
 
-    private void openReplyDialog(Post post, PostService postService, String currentUser) {
+    private void openReplyDialog(Post post, PostService postService, User currentUser) {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle("Replies");
         VerticalLayout list = new VerticalLayout();
@@ -98,7 +101,7 @@ public class PostCard extends VerticalLayout {
         field.setWidthFull();
         
         Button submit = new Button("Reply", e -> {
-            postService.replyToPost(post.postId(), field.getValue());
+            postService.replyToPost(currentUser.userId(), post.postId(), field.getValue());
             dialog.close();
             Notification.show("Reply posted");
         });
@@ -146,7 +149,7 @@ public class PostCard extends VerticalLayout {
         dialog.open();
     }
 
-    public PostCard(Post post, PostService postService, String currentUser) {
+    public PostCard(Post post, PostService postService, User currentUser) {
         this(post, postService, currentUser, false);
     }
 }

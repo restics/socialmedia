@@ -17,12 +17,10 @@ public class PostService {
     PostRepository postRepository;
     LikeRepository likeRepository;
     ShareRepository shareRepository;
-    CurrentUser currentUser;
-    public PostService(PostRepository postRepository, LikeRepository likeRepository, ShareRepository shareRepository, CurrentUser currentUser) {
+    public PostService(PostRepository postRepository, LikeRepository likeRepository, ShareRepository shareRepository) {
         this.postRepository = postRepository;
         this.likeRepository = likeRepository;
         this.shareRepository = shareRepository;
-        this.currentUser = currentUser;
     }
     public List<Post> getPostsOfUser(int userId){
         return postRepository.getPostsByAuthorId(userId);
@@ -31,11 +29,8 @@ public class PostService {
     public List<Post> findAllPosts(){
         return postRepository.findAll();
     }
-    public List<Post> findFollowingPosts(){
-        if (!currentUser.isLoggedIn()){
-            return new ArrayList<>();
-        }
-        return postRepository.getFollowingPosts(currentUser.get().userId()); //TODO: switch with current user later
+    public List<Post> findFollowingPosts(int userId){
+        return postRepository.getFollowingPosts(userId); //TODO: switch with current user later
     }
 
     public void deletePost(int postId){
@@ -49,11 +44,8 @@ public class PostService {
     // postId represents the ID of the parent post, not the new one.
     // returns the ID of the newly created post.
     @Transactional
-    public int replyToPost(int postId, String newText){
-        if (!currentUser.isLoggedIn()){
-            return -1;
-        }
-        int newpostid = postRepository.insertPost(currentUser.get().userId(), postId);
+    public int replyToPost(int userid, int postId, String newText){
+        int newpostid = postRepository.insertPost(userid, postId);
         postRepository.insertPostContent(newpostid,"text", newText, "");
         return newpostid;
     }
@@ -63,18 +55,12 @@ public class PostService {
     }
 
 
-    public void likePost(int postId){
-        if (!currentUser.isLoggedIn()){
-            return;
-        }
-        likeRepository.likePost(currentUser.get().userId(), postId);
+    public void likePost(int userId, int postId){
+        likeRepository.likePost(userId, postId);
     }
 
-    public void sharePost(int postId){
-        if (!currentUser.isLoggedIn()){
-            return;
-        }
-        shareRepository.sharePost(currentUser.get().userId(), postId);
+    public void sharePost(int userId, int postId){
+        shareRepository.sharePost(userId, postId);
     }
 
 
