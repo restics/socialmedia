@@ -2,6 +2,7 @@ package com.restics.socialmedia.view;
 
 import com.restics.socialmedia.model.User;
 // import com.restics.socialmedia.service.PostService; Need to replace with new Post service 
+import com.restics.socialmedia.service.PostService;
 import com.restics.socialmedia.service.UserService;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;

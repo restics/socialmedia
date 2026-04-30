@@ -35,7 +35,7 @@ public class UserRepository {
         return jdbc.query("SELECT * FROM users ORDER BY name", USER_MAPPER);
     }
 
-    public User findById(String id) {
+    public User findById(int id) {
         return jdbc.queryForObject("SELECT * FROM users u WHERE u.user_id = ? ORDER BY user_id", USER_MAPPER, id);
     }
 
@@ -43,18 +43,20 @@ public class UserRepository {
         return jdbc.queryForObject("SELECT * FROM users u WHERE u.name = ? ORDER BY user_id", USER_MAPPER, name);
     }
 
-    public int addUser(User user) {
-        log.atInfo().log("Adding user %s", user);
+    public User findByEmail(String email){
+        return jdbc.queryForObject("SELECT * FROM users u WHERE u.email = ? ORDER BY user_id", USER_MAPPER, email);
+    }
+    public int addUser(String name, String password, String email) {
+        log.atInfo().log("Adding user %s", name);
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO users (password, email, name, bio) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO users (name, password, email) VALUES (?, ?, ?, ?)",
                     new String[]{"user_id"}
             );
-            ps.setString(1, user.password());
-            ps.setString(2, user.email());
-            ps.setString(3, user.name());
-            ps.setString(4, user.bio());
+            ps.setString(1, name);
+            ps.setString(2, password);
+            ps.setString(3, email);
             return ps;
         }, keyHolder);
         return keyHolder.getKey().intValue();
@@ -74,4 +76,6 @@ public class UserRepository {
                 user.bio(),
                 user.userId());
     }
+
+
 }

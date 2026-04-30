@@ -6,8 +6,9 @@ import java.time.format.DateTimeFormatter;
 
 public record Post(
         int postId,
-        int parentPostId,
+        Integer parentPostId, // nullable
         String author,
+        int authorId,
         String text,
         String imageUrl,
         int likes,

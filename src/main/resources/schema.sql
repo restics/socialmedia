@@ -23,17 +23,17 @@ CREATE TABLE IF NOT EXISTS Post (
 );
 
 CREATE TABLE IF NOT EXISTS PostLike (
-                          post_id INT,
-                          user_id INT,
+                          post_id INT REFERENCES Post(post_id) ON DELETE CASCADE,
+                          user_id INT REFERENCES Users(user_id) ON DELETE CASCADE,
                           created_at TIMESTAMP,
                           PRIMARY KEY(post_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS PostShare (
-                           post_id INT,
-                           user_id INT,
-                           created_at TIMESTAMP,
-                           PRIMARY KEY(post_id, user_id)
+                                         post_id INT REFERENCES Post(post_id) ON DELETE CASCADE,
+                                         user_id INT REFERENCES Users(user_id) ON DELETE CASCADE,
+                                         created_at TIMESTAMP,
+                                         PRIMARY KEY(post_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS PostContent (
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS PostContent (
                              content_type VARCHAR(20),   -- 'text', 'image', 'video', etc.
                              text_content TEXT,
                              media_url VARCHAR(500),
-                             FOREIGN KEY (post_id) REFERENCES Post(post_id)
+                             FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS Follows (

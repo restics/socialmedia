@@ -2,10 +2,9 @@ package com.restics.socialmedia.view;
 
 import java.util.List;
 
-import org.atmosphere.config.service.Post;
-
+import com.restics.socialmedia.model.Post;
 import com.restics.socialmedia.model.User;
-// import com.restics.socialmedia.service.PostService; // Need to replace with new Post service
+import com.restics.socialmedia.service.PostService; // Need to replace with new Post service
 import com.restics.socialmedia.service.UserService;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Image;
@@ -76,7 +75,7 @@ public class ProfileView extends VerticalLayout {
 
         add(new H2("Personal Posts"));
 
-        List<Post> posts = postService.findPostsByUser(user.userId());
+        List<Post> posts = postService.getPostsOfUser(user.userId());
         if (posts.isEmpty()) {
             feed.add(new Span("No posts yet."));
         } else {

@@ -2,8 +2,7 @@ package com.restics.socialmedia.view;
 
 import java.util.List;
 
-import org.atmosphere.config.service.Post;
-
+import com.restics.socialmedia.model.Post;
 import com.restics.socialmedia.service.PostService; // Need to replace with new Post service
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
