@@ -22,7 +22,7 @@ public class PostRepository {
     public PostRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
-    private static final RowMapper<Post> POST_MAPPER = (rs, rowNum) -> new Post(
+    static final RowMapper<Post> POST_MAPPER = (rs, rowNum) -> new Post(
             rs.getInt("post_id"),
             rs.getObject("parent_post_id", Integer.class),
             rs.getString("name"),

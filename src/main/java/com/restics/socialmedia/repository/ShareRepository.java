@@ -5,39 +5,39 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class LikeRepository {
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(LikeRepository.class);
+public class ShareRepository {
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(ShareRepository.class);
     private final JdbcTemplate jdbc;
 
-    public LikeRepository(JdbcTemplate jdbc) {
+    public ShareRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
-    public boolean likedByUserId(int userId, int postId) {
+    public boolean sharedByUserId(int userId, int postId) {
         Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM PostLike WHERE user_id = ? AND post_id = ?",
+                "SELECT COUNT(*) FROM postshare WHERE user_id = ? AND post_id = ?",
                 Integer.class,
                 userId, postId
         );
         return count != null && count > 0;
     }
 
-    public int likePost(int userId, int postId) {
+    public int sharePost(int userId, int postId) {
         return jdbc.update(
-                "INSERT INTO PostLike (user_id, post_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+                "INSERT INTO postshare (user_id, post_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
                 userId, postId
         );
     }
 
-    public int unlikePost(int userId, int postId) {
+    public int unsharePost(int userId, int postId) {
         return jdbc.update(
-                "DELETE FROM PostLike WHERE user_id = ? AND post_id = ?",
+                "DELETE FROM postshare WHERE user_id = ? AND post_id = ?",
                 userId, postId
         );
     }
 
-    public int getPostLikes(int postId) {
+    public int getPostShares(int postId) {
         Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM PostLike WHERE post_id = ?",
+                "SELECT COUNT(*) FROM postshare WHERE post_id = ?",
                 Integer.class,
                 postId
         );

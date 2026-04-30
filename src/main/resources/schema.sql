@@ -18,21 +18,21 @@ CREATE TABLE IF NOT EXISTS Post (
                       numOfReplies    INT DEFAULT 0,
                       numOfLikes  INT DEFAULT 0,
                       numOfShares INT DEFAULT 0,
-                      created_at TIMESTAMP,
+                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                       PRIMARY KEY (post_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS PostLike (
                           post_id INT REFERENCES Post(post_id) ON DELETE CASCADE,
                           user_id INT REFERENCES Users(user_id) ON DELETE CASCADE,
-                          created_at TIMESTAMP,
+                          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                           PRIMARY KEY(post_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS PostShare (
                                          post_id INT REFERENCES Post(post_id) ON DELETE CASCADE,
                                          user_id INT REFERENCES Users(user_id) ON DELETE CASCADE,
-                                         created_at TIMESTAMP,
+                                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                          PRIMARY KEY(post_id, user_id)
 );
 

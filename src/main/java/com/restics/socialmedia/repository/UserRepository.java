@@ -21,7 +21,7 @@ public class UserRepository {
         this.jdbc = jdbc;
     }
 
-    private static final RowMapper<User> USER_MAPPER = (rs, rowNum) -> new User(
+    static final RowMapper<User> USER_MAPPER = (rs, rowNum) -> new User(
             rs.getInt("user_id"),
             rs.getString("password"),
             rs.getString("email"),
