@@ -35,7 +35,7 @@ public class UserListView extends VerticalLayout {
         // Follow button column
         grid.addComponentColumn(user -> {
             // Don't show button for yourself
-            if (me != null && me.userId().equals(user.userId())) {
+            if (me != null && me.userId() == user.userId()) {
                 return new Button("You");
             }
 
