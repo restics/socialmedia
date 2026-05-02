@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS PostContent, PostShare, PostLike, Post, Follows, Users CASCADE;
+;--DROP TABLE IF EXISTS PostContent, PostShare, PostLike, Post, Follows, Users CASCADE;
 CREATE TABLE IF NOT EXISTS Users (
                        user_id SERIAL PRIMARY KEY,
                        password    VARCHAR(32),
