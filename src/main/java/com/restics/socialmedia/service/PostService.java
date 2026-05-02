@@ -62,8 +62,10 @@ public class PostService {
     public void unlikePost(int userId, int postId){
         likeRepository.unlikePost(userId, postId);
     }
-    public void sharePost(int userId, int postId){
-        shareRepository.sharePost(userId, postId);
+
+    public void createPost(int userId, String content) {
+        int postId = postRepository.insertPost(userId, null);
+        postRepository.insertPostContent(postId, "text", content, null);
     }
 
     public int getNumLikes(int postId) {

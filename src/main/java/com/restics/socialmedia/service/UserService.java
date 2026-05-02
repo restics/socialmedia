@@ -37,4 +37,16 @@ public class UserService {
         return followRepo.getFollowedUsers(userId);
     }
 
+    public void follow(int followerId, int followedId){
+        followRepo.followUser(followerId, followedId);
+    }
+
+    public void unfollow(int followerId, int followedId){
+        followRepo.unfollowUser(followerId, followedId);
+    }
+
+    public boolean isFollowing(int followerId, int followedId) {
+        return followRepo.FollowedByUserId(followerId, followedId);
+    }
+
 }
