@@ -12,7 +12,6 @@ public class AuthService {
 
     UserRepository userRepository;
 
-
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
