@@ -58,7 +58,7 @@ Button submitButton = new Button("Post", e -> {
     }
 
     // Call service
-    //postService.createPost(currentUser.userId(), content);
+    postService.createPost(currentUser.userId(), content);
 
     dialog.close();
     Notification.show("Post created!");
