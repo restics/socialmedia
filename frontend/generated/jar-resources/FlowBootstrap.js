@@ -54,7 +54,32 @@ const init = function (appInitResponse) {
   window.Vaadin = window.Vaadin || {};
   window.Vaadin.Flow = window.Vaadin.Flow || {};
 
-  /*
+  /**
+   * Triggers a CSS animation on an element by adding a class, then
+   * removes the class when the animation ends.
+   */
+  window.Vaadin.Flow.flashClass = function (element, className) {
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+    function onAnimationEnd(e) {
+      if (e.target === element) {
+        element.classList.remove(className);
+        element.removeEventListener('animationend', onAnimationEnd);
+      }
+    }
+    element.addEventListener('animationend', onAnimationEnd);
+    requestAnimationFrame(function () {
+      var style = getComputedStyle(element);
+      var animName = style.animationName;
+      if (!animName || animName === 'none') {
+        element.classList.remove(className);
+        element.removeEventListener('animationend', onAnimationEnd);
+      }
+    });
+  };
+
+  /**
    * Needed for wrapping custom javascript functionality in the components (i.e. connectors)
    */
   window.Vaadin.Flow.tryCatchWrapper = function (originalFunction, component) {
@@ -76,6 +101,10 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
   if (!window.Vaadin.Flow.initApplication) {
     window.Vaadin.Flow.clients = window.Vaadin.Flow.clients || {};
 
+    /**
+     * Initializes a Flow application with the given ID and configuration,
+     * and triggers the widgetset callback to start the client engine.
+     */
     window.Vaadin.Flow.initApplication = function (appId, config) {
       var testbenchId = appId.replace(/-\d+$/, '');
 
@@ -90,7 +119,36 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
           throw new Error('Application ' + appId + ' is already being initialized');
         }
         if (isInitializedInDom(appId)) {
-          throw new Error('Application ' + appId + ' already initialized');
+          if (appInitResponse.appConfig.productionMode) {
+            throw new Error('Application ' + appId + ' already initialized');
+          }
+
+          // Remove old contents for Flow
+          var appDiv = document.getElementById(appId);
+          for (var i = 0; i < appDiv.childElementCount; i++) {
+            appDiv.childNodes[i].remove();
+          }
+
+          // For devMode reset app config and restart widgetset as client
+          // is up and running after hrm update.
+          const getConfig = function (name) {
+            return config[name];
+          };
+
+          /* Export public data */
+          const app = {
+            getConfig: getConfig
+          };
+          apps[appId] = app;
+
+          if (widgetsets['client'].callback) {
+            log('Starting from bootstrap', appId);
+            widgetsets['client'].callback(appId);
+          } else {
+            log('Setting pending startup', appId);
+            widgetsets['client'].pendingApps.push(appId);
+          }
+          return apps[appId];
         }
       }
 
@@ -115,10 +173,6 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
       };
       apps[appId] = app;
 
-      if (!window.name) {
-        window.name = appId + '-' + Math.random();
-      }
-
       var widgetset = 'client';
       widgetsets[widgetset] = {
         pendingApps: []
@@ -133,6 +187,7 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
 
       return app;
     };
+    /** Returns an array of all registered application IDs */
     window.Vaadin.Flow.getAppIds = function () {
       var ids = [];
       for (var id in apps) {
@@ -142,9 +197,14 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
       }
       return ids;
     };
+    /** Returns the application object for the given ID */
     window.Vaadin.Flow.getApp = function (appId) {
       return apps[appId];
     };
+    /**
+     * Registers a widgetset callback and starts any applications
+     * that are waiting for it.
+     */
     window.Vaadin.Flow.registerWidgetset = function (widgetset, callback) {
       log('Widgetset registered', widgetset);
       var ws = widgetsets[widgetset];
@@ -157,92 +217,6 @@ Please submit an issue to https://github.com/vaadin/flow-components/issues/new/c
         }
         ws.pendingApps = null;
       }
-    };
-    window.Vaadin.Flow.getBrowserDetailsParameters = function () {
-      var params = {};
-
-      /* Screen height and width */
-      params['v-sh'] = window.screen.height;
-      params['v-sw'] = window.screen.width;
-      /* Browser window dimensions */
-      params['v-wh'] = window.innerHeight;
-      params['v-ww'] = window.innerWidth;
-      /* Body element dimensions */
-      params['v-bh'] = document.body.clientHeight;
-      params['v-bw'] = document.body.clientWidth;
-
-      /* Current time */
-      var date = new Date();
-      params['v-curdate'] = date.getTime();
-
-      /* Current timezone offset (including DST shift) */
-      var tzo1 = date.getTimezoneOffset();
-
-      /* Compare the current tz offset with the first offset from the end
-         of the year that differs --- if less that, we are in DST, otherwise
-         we are in normal time */
-      var dstDiff = 0;
-      var rawTzo = tzo1;
-      for (var m = 12; m > 0; m--) {
-        date.setUTCMonth(m);
-        var tzo2 = date.getTimezoneOffset();
-        if (tzo1 != tzo2) {
-          dstDiff = tzo1 > tzo2 ? tzo1 - tzo2 : tzo2 - tzo1;
-          rawTzo = tzo1 > tzo2 ? tzo1 : tzo2;
-          break;
-        }
-      }
-
-      /* Time zone offset */
-      params['v-tzo'] = tzo1;
-
-      /* DST difference */
-      params['v-dstd'] = dstDiff;
-
-      /* Time zone offset without DST */
-      params['v-rtzo'] = rawTzo;
-
-      /* DST in effect? */
-      params['v-dston'] = tzo1 != rawTzo;
-
-      /* Time zone id (if available) */
-      try {
-        params['v-tzid'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } catch (err) {
-        params['v-tzid'] = '';
-      }
-
-      /* Window name */
-      if (window.name) {
-        params['v-wn'] = window.name;
-      }
-
-      /* Detect touch device support */
-      var supportsTouch = false;
-      try {
-        document.createEvent('TouchEvent');
-        supportsTouch = true;
-      } catch (e) {
-        /* Chrome and IE10 touch detection */
-        supportsTouch = 'ontouchstart' in window || typeof navigator.msMaxTouchPoints !== 'undefined';
-      }
-      params['v-td'] = supportsTouch;
-
-      /* Device Pixel Ratio */
-      params['v-pr'] = window.devicePixelRatio;
-
-      if (navigator.platform) {
-        params['v-np'] = navigator.platform;
-      }
-
-      /* Stringify each value (they are parsed on the server side) */
-      Object.keys(params).forEach(function (key) {
-        var value = params[key];
-        if (typeof value !== 'undefined') {
-          params[key] = value.toString();
-        }
-      });
-      return params;
     };
   }
 

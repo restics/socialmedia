@@ -1,34 +1,80 @@
 package com.restics.socialmedia.view;
 
+import com.restics.socialmedia.CurrentUser;
 import com.restics.socialmedia.model.User;
 import com.restics.socialmedia.service.UserService;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 
-@Route("users")  // This view lives at localhost:8080/users
+import java.util.List;
+
+@Route(value = "users", layout = MainLayout.class)
 public class UserListView extends VerticalLayout {
 
-    public UserListView(UserService userService) {
-        // Create a table that displays User objects
+    public UserListView(UserService userService, CurrentUser currentUser) {
+
+        User me = currentUser.get();
+
+        // Search bar Quickly implemented it in the frontend itself for now, change it if its eqsy
+        
+        TextField searchField = new TextField();
+        searchField.setPlaceholder("Search users...");
+        searchField.setWidth("300px");
+        
+        // Grid
         Grid<User> grid = new Grid<>(User.class, false);
 
-        // Define which columns to show
         grid.addColumn(User::userId).setHeader("User Id");
         grid.addColumn(User::name).setHeader("Username");
-        grid.addColumn(User::password).setHeader("Password");
         grid.addColumn(User::email).setHeader("Email");
-        grid.addColumn(User::profilePicture).setHeader("Profile Picture");
         grid.addColumn(User::bio).setHeader("Bio");
         grid.addColumn(User::createdAt).setHeader("Created At");
 
-        // Load data from database
-        grid.setItems(userService.getAllUsers());
+        // Follow button column
+        grid.addComponentColumn(user -> {
+            // Don't show button for current user
+            if (me != null && me.userId().equals(user.userId())) {
+                return new Button("You");
+            }
 
-        // Add the grid to the page
-        add(grid);
+            boolean isFollowing = userService.isFollowing(me.userId(), user.userId());
 
-        // Make it fill the page
+            Button followBtn = new Button(isFollowing ? "Unfollow" : "Follow");
+
+            followBtn.addClickListener(e -> {
+                if (userService.isFollowing(me.userId(), user.userId())) {
+                    userService.unfollow(me.userId(), user.userId());
+                    followBtn.setText("Follow");
+                } else {
+                    userService.follow(me.userId(), user.userId());
+                    followBtn.setText("Unfollow");
+                }
+            });
+
+            return followBtn;
+        }).setHeader("Action");
+
+        // Initial data load
+        List<User> users = userService.getAllUsers();
+        grid.setItems(users);
+
+        // Search logic
+        searchField.addValueChangeListener(e -> {
+            String query = e.getValue().toLowerCase();
+
+            List<User> filtered = userService.getAllUsers().stream()
+                    .filter(u -> u.name().toLowerCase().contains(query)
+                              || u.email().toLowerCase().contains(query))
+                    .toList();
+
+            grid.setItems(filtered);
+        });
+
+        add(searchField, grid);
+
         setSizeFull();
         grid.setSizeFull();
     }

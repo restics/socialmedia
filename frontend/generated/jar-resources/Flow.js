@@ -4,17 +4,38 @@ class FlowUiInitializationError extends Error {
 // flow uses body for keeping references
 const flowRoot = window.document.body;
 const $wnd = window;
+const ROOT_NODE_ID = 1; // See StateTree.java
+function getClients() {
+    return Object.keys($wnd.Vaadin.Flow.clients)
+        .filter((key) => key !== 'TypeScript')
+        .map((id) => $wnd.Vaadin.Flow.clients[id]);
+}
+function sendEvent(eventName, data) {
+    getClients().forEach((client) => client.sendEventMessage(ROOT_NODE_ID, eventName, data));
+}
+// In the future could be replaced with RegExp.escape()
+function escapeRegExp(pattern) {
+    return pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 /**
  * Client API for flow UI operations.
  */
 export class Flow {
+    config;
+    response = undefined;
+    pathname = '';
+    container;
+    // flag used to inform Testbench whether a server route is in progress
+    isActive = false;
+    baseRegex = /^\//;
+    appShellTitle;
+    navigation = '';
     constructor(config) {
-        this.response = undefined;
-        this.pathname = '';
-        // flag used to inform Testbench whether a server route is in progress
-        this.isActive = false;
-        this.baseRegex = /^\//;
-        this.navigation = '';
+        // Set window.name early so @PreserveOnRefresh can use it to identify the browser tab
+        // Only set if not already set to preserve any existing value
+        if (!window.name) {
+            window.name = `v-${Math.random()}`;
+        }
         flowRoot.$ = flowRoot.$ || [];
         this.config = config || {};
         // TB checks for the existence of window.Vaadin.Flow in order
@@ -26,11 +47,13 @@ export class Flow {
                 isActive: () => this.isActive
             }
         };
+        // Set browser details collection function as global for use by refresh()
+        $wnd.Vaadin.Flow.getBrowserDetailsParameters = this.collectBrowserDetails.bind(this);
         // Regular expression used to remove the app-context
         const elm = document.head.querySelector('base');
         this.baseRegex = new RegExp(`^${
         // IE11 does not support document.baseURI
-        (document.baseURI || (elm && elm.href) || '/').replace(/^https?:\/\/[^/]+/i, '')}`);
+        escapeRegExp((document.baseURI || (elm && elm.href) || '/').replace(/^https?:\/\/[^/]+/i, ''))}`);
         this.appShellTitle = document.title;
         // Put a vaadin-connection-indicator in the dom
         this.addConnectionIndicator();
@@ -71,12 +94,8 @@ export class Flow {
         // Use capture phase to detect prevented / stopped events.
         document.addEventListener('click', (_e) => {
             if (_e.target) {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore
-                if (_e.target.hasAttribute('router-link')) {
+                if (_e.composedPath().some((node) => node instanceof HTMLElement && node.hasAttribute('router-link'))) {
                     this.navigation = 'link';
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
                 }
                 else if (_e.composedPath().some((node) => node.nodeName === 'A')) {
                     this.navigation = 'client';
@@ -131,14 +150,14 @@ export class Flow {
             this.loadingStarted();
             // The callback to run from server side to cancel navigation
             this.container.serverConnected = (cancel) => {
-                resolve(cmd && cancel ? cmd.prevent() : {});
+                resolve(cmd && cancel ? cmd.prevent() : cmd?.continue?.());
                 this.loadingFinished();
             };
             // Call server side to check whether we can leave the view
-            flowRoot.$server.leaveNavigation(this.getFlowRoutePath(ctx), this.getFlowRouteQuery(ctx));
+            sendEvent('ui-leave-navigation', { route: this.getFlowRoutePath(ctx), query: this.getFlowRouteQuery(ctx) });
         });
     }
-    // Send the remote call to `JavaScriptBootstrapUI` to render the flow
+    // Send the remote call to `UI` to render the flow
     // route specified by the context
     async flowNavigate(ctx, cmd) {
         if (this.response) {
@@ -153,6 +172,7 @@ export class Flow {
                         resolve(cmd.redirect(redirectContext.pathname));
                     }
                     else {
+                        cmd?.continue?.();
                         this.container.style.display = '';
                         resolve(this.container);
                     }
@@ -162,7 +182,13 @@ export class Flow {
                     this.loadingFinished();
                 };
                 // Call server side to navigate to the given route
-                flowRoot.$server.connectClient(this.getFlowRoutePath(ctx), this.getFlowRouteQuery(ctx), this.appShellTitle, history.state, this.navigation);
+                sendEvent('ui-navigate', {
+                    route: this.getFlowRoutePath(ctx),
+                    query: this.getFlowRouteQuery(ctx),
+                    appShellTitle: this.appShellTitle,
+                    historyState: history.state,
+                    trigger: this.navigation
+                });
                 // Default to history navigation trigger.
                 // Link and client cases are handled by click listener in loadingFinished().
                 this.navigation = 'history';
@@ -174,7 +200,10 @@ export class Flow {
         }
     }
     getFlowRoutePath(context) {
-        return decodeURIComponent(context.pathname).replace(this.baseRegex, '');
+        // Don't decode the pathname here - let the server handle decoding
+        // individual path segments. This preserves the distinction between
+        // literal slashes (path separators) and encoded slashes (%2F, data).
+        return context.pathname.replace(this.baseRegex, '');
     }
     getFlowRouteQuery(context) {
         return (context.search && context.search.substring(1)) || '';
@@ -183,6 +212,7 @@ export class Flow {
     async flowInit() {
         // Do not start flow twice
         if (!this.isFlowClientLoaded()) {
+            $wnd.Vaadin.Flow.nonce = this.findNonce();
             // show flow progress indicator
             this.loadingStarted();
             // Initialize server side UI
@@ -192,15 +222,9 @@ export class Flow {
                 await this.loadScript(pushScript);
             }
             const { appId } = appConfig;
-            // Load bootstrap script with server side parameters
-            const bootstrapMod = await import('./FlowBootstrap');
-            await bootstrapMod.init(this.response);
-            // Load custom modules defined by user
-            if (typeof this.config.imports === 'function') {
-                this.injectAppIdScript(appId);
-                await this.config.imports();
-            }
             // we use a custom tag for the flow app container
+            // This must be created before bootstrapMod.init is called as that call
+            // can handle a UIDL from the server, which relies on the container being available
             const tag = `flow-container-${appId.toLowerCase()}`;
             const serverCreatedContainer = document.querySelector(tag);
             if (serverCreatedContainer) {
@@ -211,6 +235,14 @@ export class Flow {
                 this.container.id = appId;
             }
             flowRoot.$[appId] = this.container;
+            // Load bootstrap script with server side parameters
+            const bootstrapMod = await import('./FlowBootstrap');
+            bootstrapMod.init(this.response);
+            // Load custom modules defined by user
+            if (typeof this.config.imports === 'function') {
+                this.injectAppIdScript(appId);
+                await this.config.imports();
+            }
             // Load flow-client module
             const clientMod = await import('./FlowClient');
             await this.flowInitClient(clientMod);
@@ -232,14 +264,33 @@ export class Flow {
             script.onload = () => resolve();
             script.onerror = reject;
             script.src = url;
+            const { nonce } = $wnd.Vaadin.Flow;
+            if (nonce !== undefined) {
+                script.setAttribute('nonce', nonce);
+            }
             document.body.appendChild(script);
         });
+    }
+    findNonce() {
+        let nonce;
+        const scriptTags = document.head.getElementsByTagName('script');
+        for (const scriptTag of scriptTags) {
+            if (scriptTag.nonce) {
+                nonce = scriptTag.nonce;
+                break;
+            }
+        }
+        return nonce;
     }
     injectAppIdScript(appId) {
         const appIdWithoutHashCode = appId.substring(0, appId.lastIndexOf('-'));
         const scriptAppId = document.createElement('script');
         scriptAppId.type = 'module';
         scriptAppId.setAttribute('data-app-id', appIdWithoutHashCode);
+        const { nonce } = $wnd.Vaadin.Flow;
+        if (nonce !== undefined) {
+            scriptAppId.setAttribute('nonce', nonce);
+        }
         document.body.append(scriptAppId);
     }
     // After the flow-client javascript module has been loaded, this initializes flow UI
@@ -250,9 +301,7 @@ export class Flow {
         return new Promise((resolve) => {
             const intervalId = setInterval(() => {
                 // client `isActive() == true` while initializing or processing
-                const initializing = Object.keys($wnd.Vaadin.Flow.clients)
-                    .filter((key) => key !== 'TypeScript')
-                    .reduce((prev, id) => prev || $wnd.Vaadin.Flow.clients[id].isActive(), false);
+                const initializing = getClients().reduce((prev, client) => prev || client.isActive(), false);
                 if (!initializing) {
                     clearInterval(intervalId);
                     resolve();
@@ -272,7 +321,12 @@ export class Flow {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             const httpRequest = xhr;
-            const requestPath = `?v-r=init&location=${encodeURIComponent(this.getFlowRoutePath(location))}&query=${encodeURIComponent(this.getFlowRouteQuery(location))}`;
+            // Collect browser details to send with init request as JSON
+            const browserDetails = this.collectBrowserDetails();
+            const browserDetailsParam = browserDetails
+                ? `&v-browserDetails=${encodeURIComponent(JSON.stringify(browserDetails))}`
+                : '';
+            const requestPath = `?v-r=init&location=${this.getFlowRoutePath(location)}&query=${encodeURIComponent(this.getFlowRouteQuery(location))}${browserDetailsParam}`;
             httpRequest.open('GET', requestPath);
             httpRequest.onerror = () => reject(new FlowUiInitializationError(`Invalid server response when initializing Flow UI.
         ${httpRequest.status}
@@ -288,6 +342,96 @@ export class Flow {
             };
             httpRequest.send();
         });
+    }
+    // Collects browser details parameters
+    collectBrowserDetails() {
+        const params = {};
+        /* Screen height and width */
+        params['v-sh'] = $wnd.screen.height;
+        params['v-sw'] = $wnd.screen.width;
+        /* Browser window dimensions */
+        params['v-wh'] = $wnd.innerHeight;
+        params['v-ww'] = $wnd.innerWidth;
+        /* Body element dimensions */
+        params['v-bh'] = $wnd.document.body.clientHeight;
+        params['v-bw'] = $wnd.document.body.clientWidth;
+        /* Current time */
+        const date = new Date();
+        params['v-curdate'] = date.getTime();
+        /* Current timezone offset (including DST shift) */
+        const tzo1 = date.getTimezoneOffset();
+        /* Compare the current tz offset with the first offset from the end
+           of the year that differs --- if less that, we are in DST, otherwise
+           we are in normal time */
+        let dstDiff = 0;
+        let rawTzo = tzo1;
+        for (let m = 12; m > 0; m -= 1) {
+            date.setUTCMonth(m);
+            const tzo2 = date.getTimezoneOffset();
+            if (tzo1 !== tzo2) {
+                dstDiff = tzo1 > tzo2 ? tzo1 - tzo2 : tzo2 - tzo1;
+                rawTzo = tzo1 > tzo2 ? tzo1 : tzo2;
+                break;
+            }
+        }
+        /* Time zone offset */
+        params['v-tzo'] = tzo1;
+        /* DST difference */
+        params['v-dstd'] = dstDiff;
+        /* Time zone offset without DST */
+        params['v-rtzo'] = rawTzo;
+        /* DST in effect? */
+        params['v-dston'] = tzo1 !== rawTzo;
+        /* Time zone id (if available) */
+        try {
+            params['v-tzid'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        }
+        catch (err) {
+            params['v-tzid'] = '';
+        }
+        /* Window name */
+        if ($wnd.name) {
+            params['v-wn'] = $wnd.name;
+        }
+        /* Detect touch device support */
+        let supportsTouch = false;
+        try {
+            $wnd.document.createEvent('TouchEvent');
+            supportsTouch = true;
+        }
+        catch (e) {
+            /* Chrome and IE10 touch detection */
+            supportsTouch = 'ontouchstart' in $wnd || typeof $wnd.navigator.msMaxTouchPoints !== 'undefined';
+        }
+        params['v-td'] = supportsTouch;
+        /* Device Pixel Ratio */
+        params['v-pr'] = $wnd.devicePixelRatio;
+        if ($wnd.navigator.platform) {
+            params['v-np'] = $wnd.navigator.platform;
+        }
+        /* Color scheme from CSS color-scheme property */
+        const colorScheme = getComputedStyle(document.documentElement).colorScheme.trim();
+        // "normal" is the default value and means no color scheme is set
+        params['v-cs'] = colorScheme && colorScheme !== 'normal' ? colorScheme : '';
+        /* Theme name - detect which theme is in use */
+        const computedStyle = getComputedStyle(document.documentElement);
+        let themeName = '';
+        if (computedStyle.getPropertyValue('--vaadin-lumo-theme').trim()) {
+            themeName = 'lumo';
+        }
+        else if (computedStyle.getPropertyValue('--vaadin-aura-theme').trim()) {
+            themeName = 'aura';
+        }
+        params['v-tn'] = themeName;
+        /* Stringify each value (they are parsed on the server side) */
+        const stringParams = {};
+        Object.keys(params).forEach((key) => {
+            const value = params[key];
+            if (typeof value !== 'undefined') {
+                stringParams[key] = value.toString();
+            }
+        });
+        return stringParams;
     }
     // Create shared connection state store and connection indicator
     addConnectionIndicator() {

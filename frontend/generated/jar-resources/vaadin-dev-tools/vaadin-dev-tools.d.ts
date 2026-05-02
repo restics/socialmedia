@@ -1,17 +1,11 @@
-import 'construct-style-sheets-polyfill';
-import { LitElement, PropertyValueMap, TemplateResult } from 'lit';
+import { LitElement } from 'lit';
 import { Product } from './License';
 import { ConnectionStatus } from './connection';
-import './theme-editor/editor';
-import { ThemeEditorState } from './theme-editor/model';
-import './vaadin-dev-tools-info';
-import './vaadin-dev-tools-log';
 /**
  * Plugin API for the dev tools window.
  */
 export interface DevToolsInterface {
     send(command: string, data: any): void;
-    addTab(id: string, tag: string): void;
 }
 export interface MessageHandler {
     handleMessage(message: ServerMessage): boolean;
@@ -52,41 +46,25 @@ export interface DevToolsPlugin {
      */
     init(devToolsInterface: DevToolsInterface): void;
 }
-interface Feature {
-    id: string;
-    title: string;
-    moreInfoLink: string;
-    requiresServerRestart: boolean;
-    enabled: boolean;
-}
 export declare enum MessageType {
     LOG = "log",
     INFORMATION = "information",
     WARNING = "warning",
     ERROR = "error"
 }
-interface Message {
-    id: number;
-    type: MessageType;
-    message: string;
-    details?: string;
-    link?: string;
-    persistentId?: string;
-    dontShowAgain: boolean;
-    dontShowAgainMessage?: string;
-    deleted: boolean;
-}
 type DevToolsConf = {
     enable: boolean;
     url: string;
+    contextRelativePath: string;
     backend?: string;
-    liveReloadPort: number;
+    liveReloadPort?: number;
     token?: string;
+    usageStatisticsEnabled?: boolean;
 };
 export declare class VaadinDevTools extends LitElement {
-    static MAX_LOG_ROWS: number;
     unhandledMessages: ServerMessage[];
     conf: DevToolsConf;
+    bodyShadowRoot: ShadowRoot | null;
     static get styles(): import("lit").CSSResult[];
     static DISMISSED_NOTIFICATIONS_IN_LOCAL_STORAGE: string;
     static ACTIVE_KEY_IN_SESSION_STORAGE: string;
@@ -98,56 +76,30 @@ export declare class VaadinDevTools extends LitElement {
     static SPRING_BOOT_DEVTOOLS: string;
     static BACKEND_DISPLAY_NAME: Record<string, string>;
     static get isActive(): boolean;
-    static notificationDismissed(persistentId: string): boolean;
-    expanded: boolean;
-    messages: Message[];
-    splashMessage?: string;
-    notifications: Message[];
     frontendStatus: ConnectionStatus;
     javaStatus: ConnectionStatus;
-    private tabs;
-    private activeTab;
-    private features;
-    unreadErrors: boolean;
     private root;
-    private componentPicker;
     componentPickActive: boolean;
-    themeEditorState: ThemeEditorState;
     private javaConnection?;
     private frontendConnection?;
     private nextMessageId;
-    private disableEventListener?;
     private transitionDuration;
     elementTelemetry(): void;
     openWebSocketConnection(): void;
+    removeOldLinks(path: string): void;
     tabHandleMessage(tabElement: HTMLElement, message: ServerMessage): boolean;
     handleFrontendMessage(message: ServerMessage): void;
+    handleHmrMessage(message: ServerMessage): boolean;
     getDedicatedWebSocketUrl(): string | undefined;
     getSpringBootWebSocketUrl(location: any): string;
-    constructor();
     connectedCallback(): void;
     initPlugin(plugin: DevToolsPlugin): Promise<void>;
     format(o: any): string;
-    catchErrors(): void;
-    disconnectedCallback(): void;
-    toggleExpanded(): void;
-    showSplashMessage(msg: string | undefined): void;
-    demoteSplashMessage(): void;
     checkLicense(productInfo: Product): void;
-    log(type: MessageType, message: string, details?: string, link?: string, dontShowAgainMessage?: string): void;
-    showNotification(type: MessageType, message: string, details?: string, link?: string, persistentId?: string, dontShowAgainMessage?: string): void;
-    dismissNotification(id: number): void;
-    findNotificationIndex(id: number): number;
-    toggleDontShowAgain(id: number): void;
+    startPreTrial(): void;
+    downloadLicense(productInfo: Product): void;
     setActive(yes: boolean): void;
-    getStatusColor(status: ConnectionStatus | undefined): "none" | "var(--dev-tools-green-color)" | "var(--dev-tools-grey-color)" | "var(--dev-tools-yellow-hsl)" | "var(--dev-tools-red-color)";
-    renderMessage(messageObject: Message): TemplateResult<1>;
-    render(): TemplateResult<1>;
-    protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
-    renderCode(): TemplateResult<1>;
-    private renderFeatures;
+    render(): import("lit-html").TemplateResult<1>;
     setJavaLiveReloadActive(active: boolean): void;
-    renderThemeEditor(): TemplateResult<1>;
-    toggleFeatureFlag(e: Event, feature: Feature): void;
 }
 export {};
